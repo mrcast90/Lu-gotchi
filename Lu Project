@@ -1,0 +1,17 @@
+# 🐾 Lu-gotchi: Virtual Pet Simulator
+
+An interactive virtual pet game built with **Python** and **Pygame**. This project demonstrates state machine logic, real-time status management, and interactive UI design.
+
+## 🎮 How to Play
+Keep **Lu** alive and happy for as long as possible!
+
+- **[C] Feed:** Reduces hunger and improves health.
+- **[A] Pet:** Increases happiness levels.
+- **[R] Medicine:** Cures Lu when she is sick.
+- **[SPACE]:** Restart the game after Game Over.
+
+## ⚙️ Game Mechanics
+- **Dynamic States:** Lu changes sprites based on hunger, happiness, and health variables.
+- **Degradation System:** Status levels decrease over time, requiring constant attention.
+- **Random Events:** Lu can get sick randomly, adding an extra layer of challenge.
+- **Survival Timer:** Tracks how many seconds you managed to keep her alive.
