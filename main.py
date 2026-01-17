@@ -1,8 +1,10 @@
+
 import pygame
 import os
 
 # 1. Configurações Iniciais
 pygame.init()
+pygame.mixer.init()
 diretorio = os.path.dirname(__file__) 
 tela = pygame.display.set_mode((600, 400))
 pygame.display.set_caption("Lu-gotchi: O Ciclo da Vida")
@@ -46,22 +48,32 @@ skins = {
 img_fundo_jogo = carregar_img("fundo", (600, 400))
 img_fundo_menu = carregar_img("tela inicial", (600, 400))
 
+# Sons (FASE 4)
+try:
+    som_gato = pygame.mixer.Sound(os.path.join(diretorio, "Audio Gato.mp3"))
+    som_cao = pygame.mixer.Sound(os.path.join(diretorio, "Audio Cao.mp3"))
+except:
+    print("Aviso: Sons de seleção não encontrados.")
+
 # 4. Variáveis de Estado
 def resetar_status():
-    return 0.0, 100.0, 100.0, True, 0 # fome, feliz, saude, vivo, tempo
+    return 0.0, 100.0, 100.0, True, 0
 
 fome, felicidade, saude, vivo, segundos_vividos = resetar_status()
 x, y = 240, 130
 frames_contados = 0
 pet_escolhido = "gato"
 estado_atual = "MENU"
+musica_atual = ""
 
 # --- DEFINIÇÃO DE BOTÕES ---
 rect_iniciar = pygame.Rect(70, 335, 135, 45)   
 rect_tutorial = pygame.Rect(235, 335, 135, 45) 
 rect_sair = pygame.Rect(400, 335, 135, 45)      
 rect_voltar = pygame.Rect(200, 330, 200, 45)    
-rect_sair_jogo = pygame.Rect(500, 20, 80, 30) 
+
+# BOTÃO MENU (Embaixo à direita)
+rect_sair_jogo = pygame.Rect(460, 340, 120, 50) 
 
 btn_comida = pygame.Rect(20, 340, 120, 50)
 btn_carinho = pygame.Rect(160, 340, 120, 50)
@@ -69,8 +81,25 @@ btn_remedio = pygame.Rect(300, 340, 120, 50)
 
 rodando = True
 while rodando:
+    # --- LÓGICA DE ÁUDIO ---
+    if estado_atual in ["MENU", "TUTORIAL", "SKINS"]:
+        if musica_atual != "abertura":
+            try:
+                pygame.mixer.music.load(os.path.join(diretorio, "Audio Pagina Inicial.mp3"))
+                pygame.mixer.music.set_volume(0.5)
+                pygame.mixer.music.play(-1)
+                musica_atual = "abertura"
+            except: pass
+    elif estado_atual == "JOGO":
+        if musica_atual != "jogo":
+            try:
+                pygame.mixer.music.load(os.path.join(diretorio, "Audio Jogo.mp3"))
+                pygame.mixer.music.set_volume(0.4)
+                pygame.mixer.music.play(-1)
+                musica_atual = "jogo"
+            except: pass
+
     eventos = pygame.event.get()
-    
     for evento in eventos:
         if evento.type == pygame.QUIT:
             rodando = False
@@ -80,14 +109,18 @@ while rodando:
                 if rect_iniciar.collidepoint(evento.pos): estado_atual = "SKINS"
                 elif rect_tutorial.collidepoint(evento.pos): estado_atual = "TUTORIAL"
                 elif rect_sair.collidepoint(evento.pos): rodando = False
-            
             elif estado_atual == "TUTORIAL":
                 if rect_voltar.collidepoint(evento.pos): estado_atual = "MENU"
-            
             elif estado_atual == "SKINS":
-                pet_escolhido = "gato" if evento.pos[0] < 300 else "cao"
+                if evento.pos[0] < 300:
+                    pet_escolhido = "gato"
+                    try: som_gato.play()
+                    except: pass
+                else:
+                    pet_escolhido = "cao"
+                    try: som_cao.play()
+                    except: pass
                 estado_atual = "JOGO"
-                
             elif estado_atual == "JOGO":
                 if vivo:
                     if btn_comida.collidepoint(evento.pos): fome = 0
@@ -97,11 +130,6 @@ while rodando:
                     fome, felicidade, saude, vivo, segundos_vividos = resetar_status()
                     estado_atual = "MENU"
 
-        if evento.type == pygame.KEYDOWN and estado_atual == "JOGO" and vivo:
-            if evento.key == pygame.K_c: fome = 0
-            if evento.key == pygame.K_a: felicidade = 100
-            if evento.key == pygame.K_r: saude = 100
-
     # --- DESENHO DAS TELAS ---
     if estado_atual == "MENU":
         tela.blit(img_fundo_menu, (0, 0))
@@ -109,9 +137,6 @@ while rodando:
     elif estado_atual == "TUTORIAL":
         tela.fill((40, 40, 40))
         tela.blit(fonte_grande.render("COMO JOGAR", True, (255, 255, 255)), (240, 40))
-        instrucoes = ["Nao deixe a saude zerar!", "Fome e Tristeza tiram saude.", "Use os botoes ou teclas [C, A, R]"]
-        for i, txt in enumerate(instrucoes):
-            tela.blit(fonte_pequena.render(txt, True, (200, 200, 200)), (160, 120 + i*40))
         pygame.draw.rect(tela, (100, 100, 100), rect_voltar, border_radius=5)
         tela.blit(fonte_grande.render("VOLTAR", True, (255, 255, 255)), (260, 340))
 
@@ -129,26 +154,21 @@ while rodando:
         tela.blit(img_fundo_jogo, (0, 0))
         if vivo:
             frames_contados += 1
-            if frames_contados >= 60:
-                segundos_vividos += 1
-                frames_contados = 0
-            fome += 0.1
-            felicidade -= 0.05
+            if frames_contados >= 60: segundos_vividos += 1; frames_contados = 0
+            fome += 0.1; felicidade -= 0.05
             if fome > 80 or felicidade < 20: saude -= 0.1
             if saude <= 0: saude, vivo = 0, False
-
             status = "feliz"
             if saude < 50: status = "doente"
             elif fome > 70: status = "fome"
             elif felicidade < 40: status = "triste"
             imagem_pet = skins[pet_escolhido][status]
-        else:
-            imagem_pet = skins[pet_escolhido]["morto"]
+        else: imagem_pet = skins[pet_escolhido]["morto"]
 
         tela.blit(imagem_pet, (x, y))
         tela.blit(fonte_pequena.render(f"Tempo: {segundos_vividos}s", True, (0, 0, 0)), (20, 20))
 
-        # --- AS 3 BARRAS ---
+        # --- RECOLOCANDO OS NOMES DAS BARRAS ---
         pygame.draw.rect(tela, (255, 255, 255), (450, 40, 100, 15))
         pygame.draw.rect(tela, (0, 200, 0), (450, 40, int(max(0, saude)), 15))
         tela.blit(fonte_status.render("SAUDE", True, (0, 0, 0)), (390, 40))
@@ -161,16 +181,17 @@ while rodando:
         pygame.draw.rect(tela, (255, 140, 0), (450, 90, int(min(100, fome)), 15))
         tela.blit(fonte_status.render("FOME", True, (0, 0, 0)), (390, 90))
 
-        # --- LEGENDA E BOTÕES ---
+        # --- BOTÕES E RODAPÉ ---
         pygame.draw.rect(tela, (220, 220, 220), (0, 330, 600, 70))
         pygame.draw.rect(tela, (255, 165, 0), btn_comida, border_radius=8)
         pygame.draw.rect(tela, (0, 191, 255), btn_carinho, border_radius=8)
         pygame.draw.rect(tela, (220, 20, 60), btn_remedio, border_radius=8)
+        pygame.draw.rect(tela, (150, 150, 150), rect_sair_jogo, border_radius=8)
+        
         tela.blit(fonte_status.render("COMIDA (C)", True, (255, 255, 255)), (35, 355))
         tela.blit(fonte_status.render("CARINHO (A)", True, (255, 255, 255)), (175, 355))
         tela.blit(fonte_status.render("REMEDIO (R)", True, (255, 255, 255)), (315, 355))
-        pygame.draw.rect(tela, (150, 150, 150), rect_sair_jogo, border_radius=5)
-        tela.blit(fonte_status.render("MENU", True, (255, 255, 255)), (520, 25))
+        tela.blit(fonte_status.render("MENU", True, (255, 255, 255)), (500, 355))
 
     pygame.display.flip()
     relogio.tick(60)
